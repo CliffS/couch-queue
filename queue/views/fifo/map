@@ -1,0 +1,4 @@
+# vim: set filetype=coffee :
+
+(doc) ->
+  emit doc.timestamp, doc.payload if doc.pending

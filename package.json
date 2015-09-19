@@ -1,0 +1,28 @@
+{
+  "name": "couch-queue",
+  "version": "0.1.0",
+  "description": " Safe, concurrent queuing allowing multiple writers and multiple workers using CouchDB as its backend",
+  "main": "lib/queue.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CliffS/couch-queue.git"
+  },
+  "keywords": [
+    "queue",
+    "fifo",
+    "couch",
+    "couchdb"
+  ],
+  "author": "Cliff Stanford",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CliffS/couch-queue/issues"
+  },
+  "homepage": "https://github.com/CliffS/couch-queue#readme",
+  "dependencies": {
+    "nano": "^6.1.5"
+  }
+}

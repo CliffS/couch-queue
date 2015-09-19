@@ -1,0 +1,4 @@
+# vim: set filetype=coffee :
+
+(keys, values) ->
+  sum values
