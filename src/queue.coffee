@@ -1,22 +1,25 @@
 
 
 Nano = require 'nano'
+EventEmitter = require 'events'
 
 class Queue extends EventEmitter
 
   constructor: (@db = 'couch-queue', url = 'http://127.0.0.1:5984', auth) ->
     if auth?
-      return process.nextTick ->
-       @emit 'error', "Both username and password needed to authenticate" unless auth.username and auth.password
-    nano = new Nano @url
+      unless auth.username and auth.password
+        process.nextTick =>
+          @emit 'error', "Both username and password needed to authenticate"
+    nano = new Nano url
     if auth
-      nano.auth auth.username, auth.password, (err, body, headers) ->
+      @username = auth.username
+      nano.auth auth.username, auth.password, (err, body, headers) =>
         return @emit 'error', err.toString() if err
         @nano = new Nano
           url: url
           cookie: headers['set-cookie']
         @emit 'ready', @
-    else process.nextTick ->
+    else process.nextTick =>
       @nano = nano
       @emit 'ready', @
 
@@ -29,7 +32,7 @@ class Queue extends EventEmitter
           else
             err.toString()
       queue = @nano.use @db
-      queue.insert
+      design =
         language: "coffeescript"
         views:
           count:
@@ -39,7 +42,9 @@ class Queue extends EventEmitter
             map:    "(doc) -> emit doc.dequeued, doc.payload unless doc.pending"
           fifo:
             map:    "(doc) -> emit doc.enqueued, doc.payload if doc.pending"
-      , '_design/queue', (err, body) =>
+      if @username
+        design.validate_doc_update = "(doc, old, userCtx) -> throw 'Not authorised' unless userCtx.name is '#{@username}'"
+      queue.insert design, '_design/queue', (err, body) =>
         return @emit 'error', err.toString() if err
         @emit 'created', @
     @
@@ -59,17 +64,16 @@ class Queue extends EventEmitter
     queue = @nano.use @db
     queue.view 'queue', 'fifo',
       limit: 1
+      include_docs: true
     , (err, body) =>
       return @emit 'error', err.toString() if err
       if body.total_rows
-        row = body.rows[0]
-        queue.get row.id, (err, doc) =>
-          return @emit 'error', err.toString() if err
-          doc.dequeued = new Date
-          doc.pending = false
-          queue.insert doc, (err, result) =>
+        doc = body.rows[0].doc
+        doc.dequeued = new Date
+        doc.pending = false
+        queue.insert doc, (err, result) =>
           return @emit 'dequeued', doc.payload unless err
-          return @emit 'error', err.toString() unless err?.error is 'conflict'
+          return @emit 'error', err.toString() unless err.error is 'conflict'
           setTimeout =>
             do @dequeue
           , Math.floor Math.random() * 500    # Try again up to 500 ms later
@@ -93,3 +97,5 @@ class Queue extends EventEmitter
       return @emit 'error', err.toString() if err
       @emit 'remaining', body.rows[0].value
     @
+
+module.exports = Queue

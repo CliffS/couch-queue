@@ -42,6 +42,7 @@ nano.db.changes 'alice', (err, result) ->
     feed: 'longpoll'
     since: seq
     heartbeat: true
+    include_docs: true
   , (err, result) ->
     clearInterval int
     process.stdout.write "\n"
