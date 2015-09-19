@@ -1,15 +1,15 @@
 {
-   "language": "coffeescript",
-   "views": {
-       "count": {
-           "map": "# vim: filetype=coffee :\n\n(doc) ->\n  emit null, 1 if doc.pending\n",
-           "reduce": "# vim: set filetype=coffee :\n\n(keys, values) ->\n  sum values\n"
-       },
-       "done": {
-           "map": "# vim: set filetype=coffee :\n\n(doc) ->\n  emit doc.dequeued, doc.payload unless doc.pending\n"
-       },
-       "fifo": {
-           "map": "# vim: set filetype=coffee :\n\n(doc) ->\n  emit doc.timestamp, doc.payload if doc.pending\n"
-       }
-   },
+    "language": "coffeescript",
+    "views": {
+        "count": {
+            "map": "(doc) ->\n  emit null, 1 if doc.pending\n",
+                "reduce": "(keys, values) ->\n  sum values\n"
+        },
+        "done": {
+            "map": "(doc) ->\n  emit doc.dequeued, doc.payload unless doc.pending\n"
+        },
+        "fifo": {
+            "map": "(doc) ->\n  emit doc.enqueued, doc.payload if doc.pending\n"
+        }
+    },
 }
