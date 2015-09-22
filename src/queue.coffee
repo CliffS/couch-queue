@@ -6,12 +6,11 @@ EventEmitter = require 'events'
 class Queue extends EventEmitter
 
   constructor: (@db = 'couch-queue', url = 'http://127.0.0.1:5984', auth) ->
+    nano = new Nano url
     if auth?
       unless auth.username and auth.password
-        process.nextTick =>
+        return process.nextTick =>
           @emit 'error', "Both username and password needed to authenticate"
-    nano = new Nano url
-    if auth
       @username = auth.username
       nano.auth auth.username, auth.password, (err, body, headers) =>
         return @emit 'error', err.toString() if err
@@ -22,6 +21,7 @@ class Queue extends EventEmitter
     else process.nextTick =>
       @nano = nano
       @emit 'ready', @
+    @setMaxListeners 0
 
   createQueue: ->
     @nano.db.create @db, (err, body) =>
@@ -47,6 +47,7 @@ class Queue extends EventEmitter
       queue.insert design, '_design/queue', (err, body) =>
         return @emit 'error', err.toString() if err
         @emit 'created', @
+        console.log "THIS", @
     @
 
   enqueue: (payload) ->
@@ -78,9 +79,9 @@ class Queue extends EventEmitter
             do @dequeue
           , Math.floor Math.random() * 500    # Try again up to 500 ms later
       else
-        nano.db.changes @db, (err, result) =>
+        @nano.db.changes @db, (err, result) =>
           return @emit 'error', err.toString() if err
-          nano.db.changes @db,
+          @nano.db.changes @db,
             feed: 'longpoll'
             since: result.last_seq
             heartbeat: true
