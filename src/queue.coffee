@@ -21,7 +21,6 @@ class Queue extends EventEmitter
     else process.nextTick =>
       @nano = nano
       @emit 'ready', @
-    @setMaxListeners 0
 
   createQueue: ->
     @nano.db.create @db, (err, body) =>
@@ -36,8 +35,15 @@ class Queue extends EventEmitter
         language: "coffeescript"
         views:
           count:
-            map:    "(doc) -> emit null, 1 if doc.pending"
-            reduce: "(keys, values) -> sum values"
+            map:    "(doc) -> emit null, if doc.pending then [1, 0] else [0, 1]"
+            reduce: """
+              (keys, values, rereduce) ->
+                values.reduce (prev, current) ->
+                  left = prev[0] + current[0]
+                  right = prev[1] + current[1]
+                  [left, right]
+                , [0, 0]
+                  """
           dequeued:
             map:    "(doc) -> emit doc.dequeued, doc.payload unless doc.pending"
           fifo:
@@ -47,19 +53,19 @@ class Queue extends EventEmitter
       queue.insert design, '_design/queue', (err, body) =>
         return @emit 'error', err.toString() if err
         @emit 'created', @
-        console.log "THIS", @
     @
 
   enqueue: (payload) ->
+    ee = new EventEmitter
     queue = @nano.use @db
     queue.insert
       pending: true
       enqueued: new Date
       payload: payload
     , (err) =>
-      return @emit 'error', err.toString() if err
-      @emit 'enqueued', payload
-    @
+      return ee.emit 'error', err.toString() if err
+      ee.emit 'enqueued', payload
+    ee
       
   dequeue: ->
     queue = @nano.use @db
@@ -96,7 +102,26 @@ class Queue extends EventEmitter
     queue = @nano.use @db
     queue.view 'queue', count, (err, body) =>
       return @emit 'error', err.toString() if err
-      @emit 'remaining', body.rows[0].value
+      count = body.rows[0].value
+      @emit 'remaining',
+        total: value[0] + value[1]
+        pending: value[0]
+        processed: value[1]
+    @
+
+  empty: ->
+    queue = @nano.use @db
+    queue.list (err, body) ->
+      jobs = []
+      for row in body.rows when not row.id.match /^_design\./
+        so (row) ->
+          jobs.push (callback) ->
+            queue.destroy row.id row.value.rev, callback
+      Async.parallelLimit jobs, 100, (err, results) ->
+        throw err if err
+        @nano.db.compact @db, 'queue', (err, body) ->
+          return emit 'error', err if err
+          @emit 'empty', @
     @
 
 module.exports = Queue
