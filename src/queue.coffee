@@ -1,5 +1,5 @@
 
-
+Async = require 'async'
 Nano = require 'nano'
 EventEmitter = require 'events'
 
@@ -111,16 +111,20 @@ class Queue extends EventEmitter
 
   empty: ->
     queue = @nano.use @db
-    queue.list (err, body) ->
+    queue.list (err, body) =>
+      rows = (row for row in body.rows when not row.id.match /^_design\// )
+      if rows.length is 0
+        return process.nextTick =>
+          @emit 'empty', @
       jobs = []
-      for row in body.rows when not row.id.match /^_design\./
-        so (row) ->
+      for row in rows
+        do (row) ->
           jobs.push (callback) ->
-            queue.destroy row.id row.value.rev, callback
-      Async.parallelLimit jobs, 100, (err, results) ->
-        throw err if err
-        @nano.db.compact @db, 'queue', (err, body) ->
-          return emit 'error', err if err
+            queue.destroy row.id, row.value.rev, callback
+      Async.parallelLimit jobs, 100, (err, results) =>
+        return @emit 'error', err if err
+        @nano.db.compact @db, 'queue', (err, body) =>
+          return @emit 'error', err if err
           @emit 'empty', @
     @
 
