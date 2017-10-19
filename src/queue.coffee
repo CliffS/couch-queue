@@ -6,10 +6,11 @@ EventEmitter = require 'events'
 class Queue extends EventEmitter
 
   constructor: (@db = 'couch-queue', url = 'http://127.0.0.1:5984', auth) ->
+    super()
     nano = new Nano url
     if auth?
       unless auth.username and auth.password
-        return process.nextTick =>
+        return setImmediate =>
           @emit 'error', "Both username and password needed to authenticate"
       @username = auth.username
       nano.auth auth.username, auth.password, (err, body, headers) =>
@@ -18,7 +19,7 @@ class Queue extends EventEmitter
           url: url
           cookie: headers['set-cookie']
         @emit 'ready', @
-    else process.nextTick =>
+    else setImmediate =>
       @nano = nano
       @emit 'ready', @
 
@@ -56,16 +57,15 @@ class Queue extends EventEmitter
     @
 
   enqueue: (payload) ->
-    ee = new EventEmitter
     queue = @nano.use @db
     queue.insert
       pending: true
       enqueued: new Date
       payload: payload
     , (err) =>
-      return ee.emit 'error', err.toString() if err
-      ee.emit 'enqueued', payload
-    ee
+      return @emit 'error', err.toString() if err
+      @emit 'enqueued', payload
+    @
       
   dequeue: ->
     queue = @nano.use @db
@@ -114,7 +114,7 @@ class Queue extends EventEmitter
     queue.list (err, body) =>
       rows = (row for row in body.rows when not row.id.match /^_design\// )
       if rows.length is 0
-        return process.nextTick =>
+        return setImmediate =>
           @emit 'empty', @
       jobs = []
       for row in rows
