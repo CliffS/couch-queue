@@ -1,12 +1,10 @@
 
 Async = require 'async'
 Nano = require 'nano'
-EventEmitter = require 'events'
 
-class Queue extends EventEmitter
+class Queue
 
   constructor: (@db = 'couch-queue', url = 'http://127.0.0.1:5984', @auth) ->
-    super()
     if @auth?
       unless @auth.username and @auth.password
         throw new Error "Both username and password needed to authenticate"
