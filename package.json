@@ -1,6 +1,6 @@
 {
     "name": "couch-queue",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": " Safe, concurrent queuing allowing multiple writers and multiple workers using CouchDB as its backend",
     "main": "lib/queue.js",
     "scripts": {
