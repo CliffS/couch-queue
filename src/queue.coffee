@@ -4,6 +4,16 @@ Nano = require 'nano'
 EventEmitter = require 'events'
 QError = require './QError'
 
+authenticate = (url, auth) ->
+  new Promise (resolve, reject) ->
+    nano = new Nano url
+    nano.auth auth.username, auth.password, (err, body, headers) =>
+      return reject err if err
+      nano = new Nano
+        url: url
+        cookie: headers['set-cookie']
+      resolve nano
+
 class Queue extends EventEmitter
 
   constructor: (@db = 'couch-queue', url = 'http://127.0.0.1:5984', auth) ->
@@ -11,20 +21,24 @@ class Queue extends EventEmitter
     if typeof url is 'object'
       auth = url
       url  = 'http://127.0.0.1:5984'
-    nano = new Nano url
     if auth?
       unless auth.username and auth.password
         return setImmediate =>
           @emit 'error', new QError 'Both username and password needed to authenticate'
       @username = auth.username
-      nano.auth auth.username, auth.password, (err, body, headers) =>
-        return @emit 'error', new QError err if err
-        @nano = new Nano
-          url: url
-          cookie: headers['set-cookie']
+      authenticate url, auth
+      .then (nano) =>
+        @nano = nano
         @emit 'ready', @
+        setInterval =>
+          authenticate url, auth
+          .then (nano) =>
+            @nano = nano
+        , 8 * 60 * 1000
+      .catch (err) =>
+        @emit 'error', new QError 'Authenticating'
     else setImmediate =>
-      @nano = nano
+      @nano = new Nano url
       @emit 'ready', @
 
   createQueue: ->
