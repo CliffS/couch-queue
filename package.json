@@ -5,7 +5,8 @@
     "main": "lib/queue.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "coffee -c -o lib src"
+        "build": "coffee -c -o lib src",
+        "prepublishOnly": "npm run build"
     },
     "repository": {
         "type": "git",
