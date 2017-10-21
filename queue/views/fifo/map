@@ -1,4 +1,0 @@
-# vim: set filetype=coffee :
-
-(doc) ->
-  emit doc.enqueued, doc.payload if doc.pending

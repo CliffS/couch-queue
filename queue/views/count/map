@@ -1,4 +1,0 @@
-# vim: filetype=coffee :
-
-(doc) ->
-  emit null, 1 if doc.pending
