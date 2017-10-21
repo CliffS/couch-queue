@@ -4,19 +4,22 @@ Nano = require 'nano'
 
 class Queue
 
-  constructor: (@db = 'couch-queue', url = 'http://127.0.0.1:5984', @auth) ->
+  constructor: (@db = 'couch-queue', @url = 'http://127.0.0.1:5984', @auth) ->
+    if typeof @url is 'object'
+      @auth = @url
+      @url = 'http://127.0.0.1:5984'
     if @auth?
       unless @auth.username and @auth.password
         throw new Error "Both username and password needed to authenticate"
 
   setup: ->
     new Promise (resolve, reject) =>
-      nano = new Nano url
+      nano = new Nano @url
       if @auth?
         nano.auth @auth.username, @auth.password, (err, body, headers) =>
           return reject err if err
           resolve new Nano
-            url: url
+            url: @url
             cookie: headers['set-cookie']
       else resolve nano
 
