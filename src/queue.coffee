@@ -24,7 +24,6 @@ class Queue extends EventEmitter
           cookie: headers['set-cookie']
         @emit 'ready', @
     else setImmediate =>
-      process.exit()
       @nano = nano
       @emit 'ready', @
 
