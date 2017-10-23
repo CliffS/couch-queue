@@ -21,6 +21,20 @@ class Queue extends EventEmitter
     if typeof url is 'object'
       auth = url
       url  = 'http://127.0.0.1:5984'
+    time = null
+    @insertQueue = Async.queue (task, callback) =>
+      time = new Date unless time?
+      queue = @nano.use @db
+      queue.insert
+        pending: true
+        enqueued: new Date
+        payload: task
+      , (err) =>
+        callback err
+    , 500
+    @insertQueue.drain = =>
+      @emit "drained", Math.round (new Date() - time) / 1000
+      time = null
     if auth?
       unless auth.username and auth.password
         return setImmediate =>
@@ -70,12 +84,7 @@ class Queue extends EventEmitter
     @
 
   enqueue: (payload) ->
-    queue = @nano.use @db
-    queue.insert
-      pending: true
-      enqueued: new Date
-      payload: payload
-    , (err) =>
+    @insertQueue.push payload, (err) =>
       return @emit 'error', new QError err if err
       @emit 'enqueued', payload
     @
