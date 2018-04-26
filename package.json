@@ -26,9 +26,9 @@
     "homepage": "https://github.com/CliffS/couch-queue#readme",
     "dependencies": {
         "async": "^1.5.2",
-        "nano": "^6.4.2"
+        "nano": "^6.4.3"
     },
     "devDependencies": {
-        "coffeescript": "^2.0.1"
+        "coffeescript": "^2.2.4"
     }
 }
